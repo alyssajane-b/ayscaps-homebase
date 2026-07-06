@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Homebase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --paper:#FBF6EC;
+    --paper-dim:#F1E9D8;
+    --ink:#22304A;
+    --ink-soft:#4A5B78;
+    --postal-red:#C1442E;
+    --gold:#C79A46;
+    --sage:#5C7A5C;
+    --shadow: 0 8px 24px rgba(34,48,74,0.12);
+    --shadow-sm: 0 3px 10px rgba(34,48,74,0.10);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper-dim);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(34,48,74,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'Space Mono', monospace; letter-spacing:0.02em; }
+
+  /* Airmail border stripe */
+  .airmail{
+    height:10px;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--postal-red) 0 14px,
+      var(--paper) 14px 20px,
+      var(--ink) 20px 34px,
+      var(--paper) 34px 40px
+    );
+  }
+
+  .wrap{ max-width:980px; margin:0 auto; padding:0 20px 80px; }
+
+  header.hero{
+    background:var(--paper);
+    box-shadow:var(--shadow);
+    border-radius:0 0 18px 18px;
+    padding:36px 30px 26px;
+    margin-bottom:28px;
+    position:relative;
+    overflow:hidden;
+  }
+  header.hero::after{
+    content:"";
+    position:absolute; right:-40px; top:-40px;
+    width:180px; height:180px; border-radius:50%;
+    border:2px dashed rgba(34,48,74,0.15);
+  }
+  .eyebrow{
+    text-transform:uppercase; font-size:12px; letter-spacing:0.18em;
+    color:var(--postal-red); font-weight:700; margin-bottom:6px;
+  }
+  .hero-title{ font-size:clamp(28px,5vw,44px); font-weight:700; margin:0 0 4px; color:var(--ink); }
+  .hero-sub{ color:var(--ink-soft); margin:0 0 20px; font-size:15px; }
+
+  .stamp-row{ display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; }
+  .stamp{
+    background:var(--paper);
+    border:2px solid var(--ink);
+    border-radius:10px;
+    padding:14px 18px;
+    min-width:130px;
+    position:relative;
+  }
+  .stamp::before{
+    content:"";
+    position:absolute; inset:5px;
+    border:1px dashed var(--gold);
+    border-radius:6px;
+    pointer-events:none;
+  }
+  .stamp .num{ font-size:26px; font-weight:700; color:var(--postal-red); display:block; }
+  .stamp .label{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); }
+
+  .postmark{
+    width:112px; height:112px; border-radius:50%;
+    border:3px solid var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; text-align:center;
+    position:relative; flex-shrink:0;
+    background: repeating-radial-gradient(circle at center, var(--paper) 0 30px, var(--paper-dim) 31px 32px);
+  }
+  .postmark::before{
+    content:""; position:absolute; inset:8px; border:1px solid var(--ink); border-radius:50%;
+  }
+  .postmark .pm-num{ font-size:22px; font-weight:700; line-height:1; }
+  .postmark .pm-label{ font-size:9px; text-transform:uppercase; letter-spacing:0.1em; }
+
+  .hero-flex{ display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+
+  /* Nav tabs styled like ticket perforation */
+  nav.tabs{
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px;
+  }
+  nav.tabs button{
+    font-family:'Space Mono', monospace;
+    background:var(--paper);
+    border:2px solid var(--ink);
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:13px;
+    cursor:pointer;
+    color:var(--ink);
+    transition: all .15s ease;
+  }
+  nav.tabs button.active{
+    background:var(--ink); color:var(--paper);
+  }
+  nav.tabs button:hover:not(.active){ background:var(--gold); border-color:var(--gold); color:var(--ink); }
+  nav.tabs button:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
+    outline:3px solid var(--sage); outline-offset:2px;
+  }
+
+  section.panel{ display:none; animation: fadeIn .25s ease; }
+  section.panel.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  @media (prefers-reduced-motion: reduce){ section.panel{animation:none;} }
+
+  .panel-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .panel-head h2{ margin:0; font-size:26px; }
+  .panel-head p{ margin:4px 0 0; color:var(--ink-soft); font-size:14px; }
+
+  .card{
+    background:var(--paper);
+    border-radius:12px;
+    box-shadow:var(--shadow-sm);
+    padding:20px;
+  }
+
+  /* Timeline */
+  .timeline{ position:relative; padding-left:26px; }
+  .timeline::before{ content:""; position:absolute; left:6px; top:4px; bottom:4px; width:2px; background:repeating-linear-gradient(to bottom, var(--ink) 0 6px, transparent 6px 11px); }
+  .tl-entry{ position:relative; margin-bottom:20px; }
+  .tl-entry::before{
+    content:""; position:absolute; left:-26px; top:4px; width:12px; height:12px; border-radius:50%;
+    background:var(--postal-red); border:2px solid var(--paper); box-shadow:0 0 0 2px var(--ink);
+  }
+  .tl-card{ background:var(--paper); border-radius:10px; box-shadow:var(--shadow-sm); padding:14px 18px; }
+  .tl-date{ font-size:12px; color:var(--postal-red); font-weight:700; }
+  .tl-title{ font-weight:600; margin:2px 0 4px; font-size:16px; }
+  .tl-desc{ font-size:14px; color:var(--ink-soft); margin:0; }
+  .tl-del{ float:right; }
+
+  /* Grid of cards */
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; margin-top:16px; }
+
+  /* Movie ticket stub */
+  .ticket{
+    background:var(--paper);
+    border-radius:10px;
+    box-shadow:var(--shadow-sm);
+    position:relative;
+    padding:16px 16px 14px;
+    border-left:3px dashed var(--ink);
+  }
+  .ticket .kind{ font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--sage); font-weight:700; }
+  .ticket h3{ font-size:17px; margin:4px 0 8px; }
+  .status-badge{
+    display:inline-block; font-size:11px; font-family:'Space Mono',monospace;
+    padding:3px 9px; border-radius:20px; border:1px solid var(--ink); margin-bottom:8px;
+  }
+  .status-want{ background:var(--paper-dim); }
+  .status-watching{ background:#F3DFAE; }
+  .status-done{ background:var(--sage); color:var(--paper); border-color:var(--sage); }
+  .stars{ color:var(--gold); font-size:15px; letter-spacing:2px; }
+  .ticket .actions, .card .actions, .postcard .actions, .stamp-card .actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+
+  /* Gratitude postcards */
+  .postcard{
+    background:var(--paper);
+    border-radius:10px;
+    box-shadow:var(--shadow-sm);
+    padding:16px;
+    position:relative;
+    transform:rotate(var(--tilt,0deg));
+  }
+  .postcard::before{
+    content:""; position:absolute; top:10px; right:10px; width:34px; height:34px;
+    border:2px solid var(--postal-red); border-radius:4px; opacity:0.35;
+  }
+  .postcard .from{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--postal-red); font-weight:700; margin-bottom:6px; }
+  .postcard p.msg{ font-family:'Fraunces', serif; font-size:16px; margin:0 0 8px; line-height:1.4; }
+  .postcard .date{ font-size:11px; color:var(--ink-soft); }
+
+  /* Bucket list passport stamps */
+  .stamp-card{
+    background:var(--paper); border-radius:10px; box-shadow:var(--shadow-sm); padding:16px;
+    border:2px solid var(--ink);
+  }
+  .stamp-card.done{ opacity:0.6; }
+  .stamp-card .txt{ font-size:16px; font-weight:500; margin:0 0 6px; }
+  .stamp-card .txt.strike{ text-decoration:line-through; }
+  .cat-badge{ font-size:10px; font-family:'Space Mono',monospace; background:var(--paper-dim); padding:3px 8px; border-radius:6px; }
+
+  /* Buttons & inputs */
+  button.btn{
+    font-family:'Work Sans', sans-serif; font-weight:600; font-size:13px;
+    background:var(--ink); color:var(--paper); border:none; border-radius:7px;
+    padding:9px 14px; cursor:pointer; transition:transform .1s ease, background .15s ease;
+  }
+  button.btn:hover{ background:var(--postal-red); }
+  button.btn:active{ transform:scale(0.97); }
+  button.btn.secondary{ background:transparent; color:var(--ink); border:2px solid var(--ink); }
+  button.btn.secondary:hover{ background:var(--ink); color:var(--paper); }
+  button.btn.danger{ background:transparent; color:var(--postal-red); border:1px solid var(--postal-red); padding:5px 10px; font-size:12px; }
+  button.btn.danger:hover{ background:var(--postal-red); color:var(--paper); }
+
+  input, textarea, select{
+    font-family:'Work Sans', sans-serif; font-size:14px;
+    border:2px solid var(--ink); border-radius:7px; padding:9px 11px;
+    background:var(--paper); color:var(--ink); width:100%;
+  }
+  label{ font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); display:block; margin-bottom:4px; }
+  .form-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .form-row > div{ flex:1; min-width:160px; }
+  .add-form{ margin-bottom:22px; }
+
+  .empty{ text-align:center; padding:40px 20px; color:var(--ink-soft); }
+  .empty .display{ font-size:20px; color:var(--ink); }
+
+  footer{ text-align:center; padding:30px 0 10px; color:var(--ink-soft); font-size:12px; }
+
+  .visible-note{
+    background:#F3DFAE; border:1px solid var(--gold); border-radius:8px; padding:8px 12px;
+    font-size:12px; color:var(--ink); margin-bottom:18px;
+  }
+
+  /* Onboarding modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(34,48,74,0.55); display:flex;
+    align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .modal{
+    background:var(--paper); border-radius:14px; box-shadow:var(--shadow); padding:30px;
+    max-width:480px; width:100%; max-height:90vh; overflow-y:auto;
+  }
+  .hidden{ display:none !important; }
+
+  @media (max-width:600px){
+    .hero-flex{ flex-direction:column; align-items:flex-start; }
+    .postmark{ width:96px; height:96px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="airmail"></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Par Avion &middot; Two Cities, One Story</div>
+    <div class="hero-flex">
+      <div class="postmark" id="dayPostmark">
+        <span class="pm-num mono" id="dayCount">--</span>
+        <span class="pm-label">days</span>
+      </div>
+      <div style="flex:1; min-width:220px;">
+        <h1 class="hero-title" id="heroNames">Our Homebase</h1>
+        <p class="hero-sub" id="heroSub">Loading your story&hellip;</p>
+        <div class="stamp-row" id="statRow"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="visible-note">✉️ This homebase and everything on it (timeline, notes, lists) is shared — anyone with this link can view and add to it, so it's best kept just between the two of you.</div>
+
+  <nav class="tabs" id="tabNav">
+    <button data-tab="home" class="active">Home</button>
+    <button data-tab="timeline">Timeline</button>
+    <button data-tab="watchlist">Watchlist</button>
+    <button data-tab="gratitude">Gratitude Wall</button>
+    <button data-tab="bucketlist">Bucket List</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- HOME -->
+  <section class="panel active" id="panel-home">
+    <div class="panel-head">
+      <div>
+        <h2>Home</h2>
+        <p>The view from 30,000 feet.</p>
+      </div>
+    </div>
+    <div class="grid" id="homeGrid"></div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="panel" id="panel-timeline">
+    <div class="panel-head">
+      <div><h2>Timeline</h2><p>The story so far, one postmark at a time.</p></div>
+    </div>
+    <div class="card add-form">
+      <div class="form-row">
+        <div><label for="tlDate">Date</label><input type="date" id="tlDate"></div>
+        <div><label for="tlTitle">Title</label><input type="text" id="tlTitle" placeholder="First video call"></div>
+      </div>
+      <div class="form-row">
+        <div style="flex:2;"><label for="tlDesc">Story</label><textarea id="tlDesc" rows="2" placeholder="Tell it like you'd tell a friend..."></textarea></div>
+      </div>
+      <button class="btn" id="tlAddBtn">Add to timeline</button>
+    </div>
+    <div class="timeline" id="timelineList"></div>
+  </section>
+
+  <!-- WATCHLIST -->
+  <section class="panel" id="panel-watchlist">
+    <div class="panel-head">
+      <div><h2>Watchlist</h2><p>What we're watching, together apart.</p></div>
+    </div>
+    <div class="card add-form">
+      <div class="form-row">
+        <div><label for="wTitle">Title</label><input type="text" id="wTitle" placeholder="Movie or show name"></div>
+        <div><label for="wType">Type</label><select id="wType"><option value="Movie">Movie</option><option value="TV">TV Series</option></select></div>
+        <div><label for="wStatus">Status</label><select id="wStatus"><option value="want">Want to watch</option><option value="watching">Watching</option><option value="done">Finished</option></select></div>
+      </div>
+      <button class="btn" id="wAddBtn">Add to watchlist</button>
+    </div>
+    <div class="grid" id="watchlistGrid"></div>
+  </section>
+
+  <!-- GRATITUDE -->
+  <section class="panel" id="panel-gratitude">
+    <div class="panel-head">
+      <div><h2>Gratitude Wall</h2><p>Little things, said out loud.</p></div>
+    </div>
+    <div class="card add-form">
+      <div class="form-row">
+        <div><label for="gFrom">From</label><input type="text" id="gFrom" placeholder="Your name"></div>
+      </div>
+      <div class="form-row">
+        <div style="flex:2;"><label for="gMsg">What are you grateful for?</label><textarea id="gMsg" rows="2" placeholder="Thank you for..."></textarea></div>
+      </div>
+      <button class="btn" id="gAddBtn">Pin to the wall</button>
+    </div>
+    <div class="grid" id="gratitudeGrid"></div>
+  </section>
+
+  <!-- BUCKET LIST -->
+  <section class="panel" id="panel-bucketlist">
+    <div class="panel-head">
+      <div><h2>Bucket List</h2><p>Places to stamp our passports.</p></div>
+    </div>
+    <div class="card add-form">
+      <div class="form-row">
+        <div style="flex:2;"><label for="bText">Idea</label><input type="text" id="bText" placeholder="Visit Kyoto in cherry blossom season"></div>
+        <div><label for="bCat">Category</label><select id="bCat"><option>Travel</option><option>Date Night</option><option>Milestone</option><option>Adventure</option><option>Just Us</option></select></div>
+      </div>
+      <button class="btn" id="bAddBtn">Add to the list</button>
+    </div>
+    <div class="grid" id="bucketlistGrid"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="panel" id="panel-settings">
+    <div class="panel-head">
+      <div><h2>Settings</h2><p>The customs form — update your details anytime.</p></div>
+    </div>
+    <div class="card" style="max-width:520px;">
+      <div class="form-row">
+        <div><label for="sName1">Your name</label><input type="text" id="sName1"></div>
+        <div><label for="sName2">Their name</label><input type="text" id="sName2"></div>
+      </div>
+      <div class="form-row">
+        <div><label for="sCity1">Your city</label><input type="text" id="sCity1"></div>
+        <div><label for="sCity2">Their city</label><input type="text" id="sCity2"></div>
+      </div>
+      <div class="form-row">
+        <div><label for="sTz1">Your UTC offset (e.g. -8)</label><input type="number" id="sTz1" step="0.5"></div>
+        <div><label for="sTz2">Their UTC offset (e.g. +1)</label><input type="number" id="sTz2" step="0.5"></div>
+      </div>
+      <div class="form-row">
+        <div><label for="sStart">Anniversary / start date</label><input type="date" id="sStart"></div>
+        <div><label for="sVisit">Next visit date (optional)</label><input type="date" id="sVisit"></div>
+      </div>
+      <div class="form-row">
+        <div><label for="sMiles">Distance apart (miles, optional)</label><input type="number" id="sMiles"></div>
+      </div>
+      <button class="btn" id="sSaveBtn">Save details</button>
+      <span id="sSaved" class="mono" style="font-size:12px; color:var(--sage); margin-left:10px;"></span>
+    </div>
+  </section>
+
+  <footer>Made with love, saved automatically. Happy anniversary. ✈️</footer>
+</div>
+
+<!-- LOGIN GATE -->
+<div class="modal-overlay" id="loginOverlay">
+  <div class="modal">
+    <div class="eyebrow">Par Avion</div>
+    <h2 style="margin-top:0;">Sign in to your homebase</h2>
+    <p style="color:var(--ink-soft); font-size:14px;">Use the shared login you two set up. Not set up yet? See the setup guide that came with this site.</p>
+    <div class="form-row">
+      <div><label for="loginEmail">Email</label><input type="email" id="loginEmail" autocomplete="username"></div>
+    </div>
+    <div class="form-row">
+      <div><label for="loginPass">Password</label><input type="password" id="loginPass" autocomplete="current-password"></div>
+    </div>
+    <button class="btn" id="loginBtn">Sign in</button>
+    <p id="loginError" style="color:var(--postal-red); font-size:13px; margin-top:10px;"></p>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div class="modal-overlay hidden" id="onboardOverlay">
+  <div class="modal">
+    <div class="eyebrow">Welcome</div>
+    <h2 style="margin-top:0;">Let's set up your homebase</h2>
+    <p style="color:var(--ink-soft); font-size:14px;">Just the basics — you can change any of this later in Settings.</p>
+    <div class="form-row">
+      <div><label for="oName1">Your name</label><input type="text" id="oName1"></div>
+      <div><label for="oName2">Their name</label><input type="text" id="oName2"></div>
+    </div>
+    <div class="form-row">
+      <div><label for="oCity1">Your city</label><input type="text" id="oCity1"></div>
+      <div><label for="oCity2">Their city</label><input type="text" id="oCity2"></div>
+    </div>
+    <div class="form-row">
+      <div><label for="oStart">Anniversary / start date</label><input type="date" id="oStart"></div>
+    </div>
+    <button class="btn" id="oSaveBtn">Start our homebase</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ===== FIREBASE SETUP =====
+  // Paste your Firebase project config here (see setup instructions).
+  
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDzHh3nJoWJJlF4vV8fbxQWZBhLNv4vtcQ",
+    authDomain: "ayscaps-homebase.firebaseapp.com",
+    projectId: "ayscaps-homebase",
+    storageBucket: "ayscaps-homebase.firebasestorage.app",
+    messagingSenderId: "1058919873067",
+    appId: "1:1058919873067:web:7a09182d94275c8f71c86e"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const docRef = db.collection('homebase').doc('shared');
+  let unsubscribeSnapshot = null;
+
+  const DEFAULT_SETTINGS = {
+    name1:"", name2:"", city1:"", city2:"", tz1:null, tz2:null,
+    start:"", visit:"", miles:null
+  };
+  let settings = {...DEFAULT_SETTINGS};
+  let timeline = [];
+  let watchlist = [];
+  let gratitude = [];
+  let bucketlist = [];
+
+  const $ = (id) => document.getElementById(id);
+  const uid = () => Math.random().toString(36).slice(2,9);
+
+  // Save just one field of the shared document (merge:true keeps the rest intact)
+  async function saveField(field, value){
+    try{ await docRef.set({ [field]: value }, { merge:true }); }
+    catch(e){ console.error('save '+field+' failed', e); alert('Could not save — check your connection and try again.'); }
+  }
+  async function saveSettings(){ await saveField('settings', settings); }
+  async function saveTimeline(){ await saveField('timeline', timeline); }
+  async function saveWatchlist(){ await saveField('watchlist', watchlist); }
+  async function saveGratitude(){ await saveField('gratitude', gratitude); }
+  async function saveBucketlist(){ await saveField('bucketlist', bucketlist); }
+
+  // Live-sync: whenever the shared document changes (by either of you, from any device),
+  // update local state and re-render.
+  function startListening(){
+    if(unsubscribeSnapshot) return;
+    unsubscribeSnapshot = docRef.onSnapshot((snap)=>{
+      const data = snap.exists ? snap.data() : {};
+      settings = {...DEFAULT_SETTINGS, ...(data.settings||{})};
+      timeline = data.timeline || [];
+      watchlist = data.watchlist || [];
+      gratitude = data.gratitude || [];
+      bucketlist = data.bucketlist || [];
+      if(!settings.start && !settings.name1){
+        $('onboardOverlay').classList.remove('hidden');
+      } else {
+        $('onboardOverlay').classList.add('hidden');
+      }
+      renderAll();
+    }, (err)=>{
+      console.error('Sync error', err);
+    });
+  }
+  function stopListening(){
+    if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+  }
+
+  // ===== AUTH GATE =====
+  auth.onAuthStateChanged((user)=>{
+    if(user){
+      $('loginOverlay').classList.add('hidden');
+      startListening();
+    } else {
+      stopListening();
+      $('loginOverlay').classList.remove('hidden');
+      $('onboardOverlay').classList.add('hidden');
+    }
+  });
+
+  $('loginBtn').addEventListener('click', async ()=>{
+    const email = $('loginEmail').value.trim();
+    const pass = $('loginPass').value;
+    $('loginError').textContent = '';
+    if(!email || !pass){ $('loginError').textContent = 'Enter both email and password.'; return; }
+    try{
+      await auth.signInWithEmailAndPassword(email, pass);
+    }catch(e){
+      $('loginError').textContent = 'Could not sign in: ' + (e.message || 'check your email and password.');
+    }
+  });
+
+  function fmtDate(d){
+    if(!d) return "";
+    const dt = new Date(d + "T00:00:00");
+    return dt.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
+  }
+
+  function daysBetween(a,b){
+    return Math.round((b-a)/(1000*60*60*24));
+  }
+
+  // ---------- TABS ----------
+  document.querySelectorAll('#tabNav button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#tabNav button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      $('panel-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- HERO / HOME ----------
+  function renderHero(){
+    const n1 = settings.name1 || "You";
+    const n2 = settings.name2 || "Them";
+    $('heroNames').textContent = n1 + " & " + n2;
+    if(settings.start){
+      const start = new Date(settings.start + "T00:00:00");
+      const now = new Date();
+      const days = daysBetween(start, now);
+      $('dayCount').textContent = days >= 0 ? days : 0;
+      $('heroSub').textContent = "Together since " + fmtDate(settings.start) + (settings.city1 && settings.city2 ? (" \u2022 " + settings.city1 + " \u2192 " + settings.city2) : "");
+    } else {
+      $('dayCount').textContent = "?";
+      $('heroSub').textContent = "Add your start date in Settings to begin the countdown.";
+    }
+    renderStatRow();
+    renderHomeGrid();
+  }
+
+  function renderStatRow(){
+    const row = $('statRow');
+    const watched = watchlist.filter(w=>w.status==='done').length;
+    const notes = gratitude.length;
+    const doneBucket = bucketlist.filter(b=>b.done).length;
+    let stats = [
+      {num: watched, label:"Watched"},
+      {num: notes, label:"Grateful notes"},
+      {num: doneBucket + "/" + bucketlist.length, label:"Bucket list"}
+    ];
+    if(settings.miles){
+      stats.push({num: settings.miles, label:"Miles apart"});
+    }
+    if(settings.visit){
+      const now = new Date(); const v = new Date(settings.visit+"T00:00:00");
+      const d = daysBetween(now, v);
+      if(d >= 0) stats.push({num:d, label:"Days to next visit"});
+    }
+    row.innerHTML = stats.map(s => `<div class="stamp"><span class="num mono">${s.num}</span><span class="label">${s.label}</span></div>`).join('');
+  }
+
+  function timeInZone(offset){
+    if(offset === null || offset === undefined || offset === "") return null;
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset()*60000);
+    const target = new Date(utc + (parseFloat(offset)*3600000));
+    return target.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function renderHomeGrid(){
+    const grid = $('homeGrid');
+    const cards = [];
+
+    const t1 = timeInZone(settings.tz1);
+    const t2 = timeInZone(settings.tz2);
+    if(t1 || t2){
+      cards.push(`<div class="card">
+        <h3 style="margin-top:0;">Right now</h3>
+        <p class="mono" style="margin:4px 0;">${settings.name1||'You'} (${settings.city1||'—'}): ${t1||'—'}</p>
+        <p class="mono" style="margin:4px 0;">${settings.name2||'Them'} (${settings.city2||'—'}): ${t2||'—'}</p>
+      </div>`);
+    }
+
+    const upcomingMilestones = [];
+    if(settings.start){
+      const start = new Date(settings.start+"T00:00:00");
+      const now = new Date();
+      let years = now.getFullYear() - start.getFullYear();
+      let nextAnniv = new Date(start); nextAnniv.setFullYear(start.getFullYear()+years);
+      if(nextAnniv < now){ nextAnniv.setFullYear(nextAnniv.getFullYear()+1); years++; }
+      const d = daysBetween(now, nextAnniv);
+      upcomingMilestones.push(`Year ${years} anniversary in ${d} day${d===1?'':'s'}`);
+    }
+    if(upcomingMilestones.length){
+      cards.push(`<div class="card"><h3 style="margin-top:0;">Coming up</h3><p>${upcomingMilestones.join('<br>')}</p></div>`);
+    }
+
+    const recentTl = [...timeline].sort((a,b)=> b.date.localeCompare(a.date)).slice(0,3);
+    if(recentTl.length){
+      cards.push(`<div class="card"><h3 style="margin-top:0;">Latest memory</h3>
+        ${recentTl.map(e=>`<p class="mono" style="font-size:12px; color:var(--postal-red); margin:6px 0 0;">${fmtDate(e.date)}</p><p style="margin:2px 0 10px; font-weight:600;">${escapeHtml(e.title)}</p>`).join('')}
+      </div>`);
+    }
+
+    const recentNote = [...gratitude].sort((a,b)=> b.date.localeCompare(a.date))[0];
+    if(recentNote){
+      cards.push(`<div class="card"><h3 style="margin-top:0;">Latest gratitude</h3><p style="font-family:'Fraunces',serif;">"${escapeHtml(recentNote.text)}"</p><p class="mono" style="font-size:12px; color:var(--ink-soft);">— ${escapeHtml(recentNote.author||'Anonymous')}</p></div>`);
+    }
+
+    if(cards.length === 0){
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="display">Your story starts here.</div><p>Add a timeline entry, a gratitude note, or a bucket list idea to see it show up on your home page.</p></div>`;
+    } else {
+      grid.innerHTML = cards.join('');
+    }
+  }
+
+  function escapeHtml(str){
+    if(!str) return "";
+    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // ---------- TIMELINE ----------
+  function renderTimeline(){
+    const list = $('timelineList');
+    if(timeline.length === 0){
+      list.innerHTML = `<div class="empty"><div class="display">No entries yet</div><p>Add your first memory above.</p></div>`;
+      return;
+    }
+    const sorted = [...timeline].sort((a,b)=> b.date.localeCompare(a.date));
+    list.innerHTML = sorted.map(e => `
+      <div class="tl-entry">
+        <div class="tl-card">
+          <button class="btn danger tl-del" data-id="${e.id}" data-kind="timeline">Remove</button>
+          <div class="tl-date mono">${fmtDate(e.date)}</div>
+          <div class="tl-title">${escapeHtml(e.title)}</div>
+          <p class="tl-desc">${escapeHtml(e.desc||'')}</p>
+        </div>
+      </div>`).join('');
+  }
+
+  $('tlAddBtn').addEventListener('click', async ()=>{
+    const date = $('tlDate').value;
+    const title = $('tlTitle').value.trim();
+    const desc = $('tlDesc').value.trim();
+    if(!date || !title){ alert('Please add a date and a title.'); return; }
+    timeline.push({id:uid(), date, title, desc});
+    await saveTimeline();
+    $('tlDate').value=''; $('tlTitle').value=''; $('tlDesc').value='';
+    renderTimeline(); renderHero();
+  });
+
+  // ---------- WATCHLIST ----------
+  function renderWatchlist(){
+    const grid = $('watchlistGrid');
+    if(watchlist.length === 0){
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="display">Nothing queued up</div><p>Add a movie or show you want to watch together.</p></div>`;
+      return;
+    }
+    const order = {watching:0, want:1, done:2};
+    const sorted = [...watchlist].sort((a,b)=> order[a.status]-order[b.status]);
+    grid.innerHTML = sorted.map(w => `
+      <div class="ticket">
+        <span class="kind">${w.type}</span>
+        <h3>${escapeHtml(w.title)}</h3>
+        <span class="status-badge status-${w.status}">${w.status==='want'?'Want to watch':w.status==='watching'?'Watching':'Finished'}</span>
+        ${w.status==='done' ? `<div class="stars">${'★'.repeat(w.rating||0)}${'☆'.repeat(5-(w.rating||0))}</div>` : ''}
+        <div class="actions">
+          ${w.status!=='done' ? `<button class="btn secondary" data-id="${w.id}" data-kind="w-advance" style="font-size:12px; padding:6px 10px;">${w.status==='want'?'Start watching':'Mark finished'}</button>` : ''}
+          <button class="btn danger" data-id="${w.id}" data-kind="watchlist">Remove</button>
+        </div>
+      </div>`).join('');
+  }
+
+  $('wAddBtn').addEventListener('click', async ()=>{
+    const title = $('wTitle').value.trim();
+    if(!title){ alert('Add a title first.'); return; }
+    const type = $('wType').value;
+    const status = $('wStatus').value;
+    watchlist.push({id:uid(), title, type, status, rating: status==='done'?5:0});
+    await saveWatchlist();
+    $('wTitle').value='';
+    renderWatchlist(); renderHero();
+  });
+
+  // ---------- GRATITUDE ----------
+  function renderGratitude(){
+    const grid = $('gratitudeGrid');
+    if(gratitude.length === 0){
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="display">The wall is empty</div><p>Pin something you're grateful for.</p></div>`;
+      return;
+    }
+    const sorted = [...gratitude].sort((a,b)=> b.date.localeCompare(a.date));
+    grid.innerHTML = sorted.map((g,i) => `
+      <div class="postcard" style="--tilt:${(i%2===0?-1:1)*1.2}deg;">
+        <div class="from">From ${escapeHtml(g.author||'Anonymous')}</div>
+        <p class="msg">"${escapeHtml(g.text)}"</p>
+        <div class="date mono">${fmtDate(g.date)}</div>
+        <div class="actions"><button class="btn danger" data-id="${g.id}" data-kind="gratitude">Remove</button></div>
+      </div>`).join('');
+  }
+
+  $('gAddBtn').addEventListener('click', async ()=>{
+    const text = $('gMsg').value.trim();
+    if(!text){ alert('Write a note first.'); return; }
+    const author = $('gFrom').value.trim();
+    gratitude.push({id:uid(), author, text, date: new Date().toISOString().slice(0,10)});
+    await saveGratitude();
+    $('gMsg').value='';
+    renderGratitude(); renderHero();
+  });
+
+  // ---------- BUCKET LIST ----------
+  function renderBucketlist(){
+    const grid = $('bucketlistGrid');
+    if(bucketlist.length === 0){
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="display">No ideas yet</div><p>What's one thing you want to do together?</p></div>`;
+      return;
+    }
+    grid.innerHTML = bucketlist.map(b => `
+      <div class="stamp-card ${b.done?'done':''}">
+        <span class="cat-badge">${escapeHtml(b.category)}</span>
+        <p class="txt ${b.done?'strike':''}">${escapeHtml(b.text)}</p>
+        <div class="actions">
+          <button class="btn secondary" data-id="${b.id}" data-kind="b-toggle" style="font-size:12px; padding:6px 10px;">${b.done?'Mark undone':'Mark done'}</button>
+          <button class="btn danger" data-id="${b.id}" data-kind="bucketlist">Remove</button>
+        </div>
+      </div>`).join('');
+  }
+
+  $('bAddBtn').addEventListener('click', async ()=>{
+    const text = $('bText').value.trim();
+    if(!text){ alert('Add an idea first.'); return; }
+    const category = $('bCat').value;
+    bucketlist.push({id:uid(), text, category, done:false});
+    await saveBucketlist();
+    $('bText').value='';
+    renderBucketlist(); renderHero();
+  });
+
+  // ---------- delegated remove/toggle actions ----------
+  document.body.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('button[data-kind]');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    const kind = btn.dataset.kind;
+    if(kind === 'timeline'){ timeline = timeline.filter(x=>x.id!==id); await saveTimeline(); renderTimeline(); renderHero(); }
+    if(kind === 'watchlist'){ watchlist = watchlist.filter(x=>x.id!==id); await saveWatchlist(); renderWatchlist(); renderHero(); }
+    if(kind === 'gratitude'){ gratitude = gratitude.filter(x=>x.id!==id); await saveGratitude(); renderGratitude(); renderHero(); }
+    if(kind === 'bucketlist'){ bucketlist = bucketlist.filter(x=>x.id!==id); await saveBucketlist(); renderBucketlist(); renderHero(); }
+    if(kind === 'b-toggle'){ const item = bucketlist.find(x=>x.id===id); if(item){ item.done = !item.done; await saveBucketlist(); renderBucketlist(); renderHero(); } }
+    if(kind === 'w-advance'){
+      const item = watchlist.find(x=>x.id===id);
+      if(item){
+        item.status = item.status === 'want' ? 'watching' : 'done';
+        if(item.status === 'done' && !item.rating) item.rating = 5;
+        await saveWatchlist(); renderWatchlist(); renderHero();
+      }
+    }
+  });
+
+  // ---------- SETTINGS ----------
+  function fillSettingsForm(){
+    $('sName1').value = settings.name1||'';
+    $('sName2').value = settings.name2||'';
+    $('sCity1').value = settings.city1||'';
+    $('sCity2').value = settings.city2||'';
+    $('sTz1').value = settings.tz1 ?? '';
+    $('sTz2').value = settings.tz2 ?? '';
+    $('sStart').value = settings.start||'';
+    $('sVisit').value = settings.visit||'';
+    $('sMiles').value = settings.miles ?? '';
+  }
+
+  $('sSaveBtn').addEventListener('click', async ()=>{
+    settings.name1 = $('sName1').value.trim();
+    settings.name2 = $('sName2').value.trim();
+    settings.city1 = $('sCity1').value.trim();
+    settings.city2 = $('sCity2').value.trim();
+    settings.tz1 = $('sTz1').value === '' ? null : parseFloat($('sTz1').value);
+    settings.tz2 = $('sTz2').value === '' ? null : parseFloat($('sTz2').value);
+    settings.start = $('sStart').value;
+    settings.visit = $('sVisit').value;
+    settings.miles = $('sMiles').value === '' ? null : parseFloat($('sMiles').value);
+    await saveSettings();
+    $('sSaved').textContent = 'Saved ✓';
+    setTimeout(()=> $('sSaved').textContent = '', 2000);
+    renderHero();
+  });
+
+  // ---------- ONBOARDING ----------
+  $('oSaveBtn').addEventListener('click', async ()=>{
+    settings.name1 = $('oName1').value.trim();
+    settings.name2 = $('oName2').value.trim();
+    settings.city1 = $('oCity1').value.trim();
+    settings.city2 = $('oCity2').value.trim();
+    settings.start = $('oStart').value;
+    await saveSettings();
+    $('onboardOverlay').classList.add('hidden');
+    fillSettingsForm();
+    renderAll();
+  });
+
+  function renderAll(){
+    renderHero();
+    renderTimeline();
+    renderWatchlist();
+    renderGratitude();
+    renderBucketlist();
+    fillSettingsForm();
+  }
+
+  // live clock refresh every 30s for home tab
+  setInterval(()=>{ renderStatRow(); renderHomeGrid(); }, 30000);
+
+  // Initial render so the page isn't blank before auth resolves.
+  renderAll();
+})();
+</script>
+</body>
+</html>
